@@ -81,11 +81,8 @@ class PipelineRunner:
             'dataset_name': self.config.get('dataset_name', 'github_data')
         }
         
-        # Add destination-specific configuration
-        if pipeline_config['destination'] == 'duckdb':
-            # Use specified database file or default
-            db_file = self.config.get('database_file', 'github_cardano.duckdb')
-            pipeline_config['credentials'] = db_file
+        # For DuckDB, let dlt use its default database file naming
+        # The database will be created as {pipeline_name}.duckdb automatically
         
         self.logger.info(f"Creating pipeline: {pipeline_config}")
         return dlt.pipeline(**pipeline_config)

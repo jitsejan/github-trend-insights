@@ -118,14 +118,25 @@ class GitHubCollector:
 def get_existing_repos() -> set:
     """Get list of existing repositories from the database"""
     try:
-        pipeline = dlt.pipeline('github_cardano', destination='duckdb', dataset_name='github_data')
-        with pipeline.sql_client() as client:
-            try:
-                result = client.execute_sql("SELECT name_with_owner FROM github_data.repositories")
-                return {row[0] for row in result}
-            except Exception:
-                logger.info("No existing repositories table found - starting fresh")
-                return set()
+        import duckdb
+        import os
+        
+        # Try to connect to database file directly
+        db_files = ['github_cardano.duckdb', 'github_cardano_test.duckdb']
+        for db_file in db_files:
+            if os.path.exists(db_file):
+                try:
+                    conn = duckdb.connect(db_file, read_only=True)
+                    result = conn.execute("SELECT name_with_owner FROM github_data.repositories").fetchall()
+                    conn.close()
+                    existing = {row[0] for row in result}
+                    logger.info(f"Found {len(existing)} existing repositories in {db_file}")
+                    return existing
+                except Exception:
+                    continue
+        
+        logger.info("No existing repositories table found - starting fresh")
+        return set()
     except Exception as e:
         logger.warning(f"Could not check existing repositories: {e}")
         return set()
@@ -199,7 +210,6 @@ def repositories(
                     updatedAt
                     pushedAt
                     stargazerCount
-                    watcherCount
                     forkCount
                     diskUsage
                     primaryLanguage {
@@ -349,21 +359,36 @@ def pull_requests(collector: GitHubCollector) -> Iterator[Dict[str, Any]]:
     
     logger.info("Collecting pull requests for repositories")
     
-    # Get repositories from current pipeline context
-    pipeline = dlt.pipeline('github_cardano', destination='duckdb', dataset_name='github_data')
-    
-    # This resource depends on repositories being loaded first
-    with pipeline.sql_client() as client:
-        try:
-            repos_result = client.execute_sql("""
-                SELECT name_with_owner, repo_database_id, stargazer_count 
-                FROM github_data.repositories 
-                ORDER BY stargazer_count DESC
-            """)
-            repositories_list = list(repos_result)
-        except Exception:
+    # Get repositories from database
+    try:
+        import duckdb
+        import os
+        
+        db_files = ['github_cardano.duckdb', 'github_cardano_test.duckdb']
+        repositories_list = []
+        
+        for db_file in db_files:
+            if os.path.exists(db_file):
+                try:
+                    conn = duckdb.connect(db_file, read_only=True)
+                    result = conn.execute("""
+                        SELECT name_with_owner, repo_database_id, stargazer_count 
+                        FROM github_data.repositories 
+                        ORDER BY stargazer_count DESC
+                    """).fetchall()
+                    conn.close()
+                    repositories_list = list(result)
+                    break
+                except Exception:
+                    continue
+        
+        if not repositories_list:
             logger.info("No repositories found - PRs will be collected on next run")
             return
+            
+    except Exception as e:
+        logger.info(f"Could not load repositories: {e}")
+        return
     
     if not repositories_list:
         logger.info("No repositories available for PR collection")
@@ -536,20 +561,36 @@ def releases(collector: GitHubCollector) -> Iterator[Dict[str, Any]]:
     
     logger.info("Collecting releases for repositories")
     
-    # Get repositories from current pipeline context
-    pipeline = dlt.pipeline('github_cardano', destination='duckdb', dataset_name='github_data')
-    
-    with pipeline.sql_client() as client:
-        try:
-            repos_result = client.execute_sql("""
-                SELECT name_with_owner, repo_database_id, stargazer_count 
-                FROM github_data.repositories 
-                ORDER BY stargazer_count DESC
-            """)
-            repositories_list = list(repos_result)
-        except Exception:
+    # Get repositories from database
+    try:
+        import duckdb
+        import os
+        
+        db_files = ['github_cardano.duckdb', 'github_cardano_test.duckdb']
+        repositories_list = []
+        
+        for db_file in db_files:
+            if os.path.exists(db_file):
+                try:
+                    conn = duckdb.connect(db_file, read_only=True)
+                    result = conn.execute("""
+                        SELECT name_with_owner, repo_database_id, stargazer_count 
+                        FROM github_data.repositories 
+                        ORDER BY stargazer_count DESC
+                    """).fetchall()
+                    conn.close()
+                    repositories_list = list(result)
+                    break
+                except Exception:
+                    continue
+        
+        if not repositories_list:
             logger.info("No repositories found - releases will be collected on next run")
             return
+            
+    except Exception as e:
+        logger.info(f"Could not load repositories: {e}")
+        return
     
     if not repositories_list:
         logger.info("No repositories available for release collection")
@@ -568,7 +609,6 @@ def releases(collector: GitHubCollector) -> Iterator[Dict[str, Any]]:
                     name
                     tagName
                     description
-                    body
                     url
                     createdAt
                     publishedAt
