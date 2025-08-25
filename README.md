@@ -1,325 +1,163 @@
-# GitHub Cardano Wallet Ecosystem Insights
+# GitHub Cardano Ecosystem Insights
 
-A comprehensive data collection and analysis pipeline for the entire Cardano wallet ecosystem on GitHub.
+A comprehensive data collection and analysis pipeline for the Cardano ecosystem on GitHub, providing insights into development activity, trends, and ecosystem health.
 
 ## 🎯 Project Overview
 
-This project provides a production-ready **dlt (data load tool)** pipeline for collecting GitHub data from the Cardano wallet ecosystem. It features comprehensive error handling, incremental loading, rate limiting, and state management.
+This project provides a **production-ready data pipeline** combining **dlt (data load tool)** for GitHub API ingestion with **dbt (data build tool)** for analytics transformations, following modern data engineering best practices.
 
 ### ✨ Key Features
 
-- 🔄 **Incremental Loading** - Only processes new data, skipping existing repositories
-- 🛡️ **Comprehensive Error Handling** - Robust retry logic and graceful failure handling
-- ⚡ **Rate Limiting** - Intelligent GitHub API rate limit management
-- 📊 **Rich Data Collection** - Repositories, pull requests, releases, labels, and metadata
-- 🎛️ **Configurable** - Multiple predefined configurations and custom parameters
-- 📝 **Production Logging** - Detailed logging with configurable levels and file output
-- 🗄️ **DuckDB Integration** - Fast, local analytical database
-- ☁️ **S3 Support** - Cloud storage integration for large datasets
+- 🔄 **Modern Data Pipeline** - dlt ingestion → dbt transformations → analytics
+- 🛡️ **Production Ready** - Comprehensive error handling, rate limiting, and monitoring  
+- 📊 **Rich GitHub Data** - Repositories, pull requests, releases, issues with full metadata
+- 🎛️ **Configurable** - Multiple repository sets and data volume controls
+- 🧪 **Comprehensive Testing** - Full pytest suite with parametrized testing
+- 📝 **Feature Classification** - Automatic PR categorization (bug fix, feature, refactor, etc.)
+- 🏗️ **Medallion Architecture** - Bronze/Silver/Gold data layers with dbt
+
+## 🏗️ Architecture
+
+```
+GitHub API → dlt → DuckDB → dbt → Analytics & Exports
+            (Extract)  (Load)  (Transform)    (Serve)
+```
+
+### Data Pipeline Components
+
+- **`dlt Pipeline`** - GitHub API connector with rate limiting and error handling
+- **`DuckDB`** - Fast analytical database for local development and production
+- **`dbt Models`** - Medallion architecture transformations (Bronze→Silver→Gold)
+- **`pytest Suite`** - Comprehensive testing with mocks and integration tests
+
+### Repository Structure
+
+```
+├── github_insights/                # Main dbt project
+│   ├── src/cardano_insights/      # dlt connectors and pipeline
+│   │   ├── connectors/github.py   # GitHub API connector
+│   │   └── github_pipeline.py     # Pipeline orchestration
+│   ├── models/                    # dbt models
+│   │   ├── bronze/               # Raw API data
+│   │   ├── silver/               # Cleaned & classified data
+│   │   └── gold/                 # Business metrics
+│   ├── tests/                    # pytest test suite
+│   └── scripts/                  # Utility scripts
+├── pipeline.py                   # Legacy root-level pipeline (deprecated)
+└── run_pipeline.py              # Legacy runner (deprecated)
+```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-```bash
-# Install uv (recommended Python package manager)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+- Python 3.11+
+- GitHub Personal Access Token (recommended for rate limits)
 
-# Or use pip
-pip install -r requirements.txt
-```
-
-### Setup
-
-1. **Clone and install dependencies:**
-   ```bash
-   git clone <repo-url>
-   cd github-trend-insights
-   uv sync
-   # or: pip install -e .
-   ```
-
-2. **Configure environment:**
-   ```bash
-   # Copy environment template
-   cp .env.example .env
-   
-   # Edit .env and add your GitHub Personal Access Token
-   # Get token from: https://github.com/settings/tokens
-   GITHUB_PAT=ghp_your_token_here
-   ```
-
-3. **Run the pipeline:**
-   ```bash
-   # Quick test run (10 repositories)
-   python run_pipeline.py --config test
-   
-   # Full Cardano ecosystem (500 repositories)
-   python run_pipeline.py --config cardano
-   
-   # Popular wallets only (100 repos, 5+ stars)
-   python run_pipeline.py --config cardano-popular
-   ```
-
-## 🎛️ Configuration Options
-
-### Predefined Configurations
-
-| Config | Description | Repos | Min Stars |
-|--------|-------------|-------|-----------|
-| `cardano` | Complete Cardano wallet ecosystem | 500 | 0 |
-| `cardano-popular` | Popular Cardano wallets | 100 | 5+ |
-| `cardano-active` | Recently active projects | 200 | 0 |
-| `test` | Small test run | 10 | 0 |
-
-### Custom Parameters
+### Installation
 
 ```bash
-# Custom search and limits
-python run_pipeline.py --search "ada wallet" --max-repos 50 --min-stars 3
+# Clone repository
+git clone <repo-url>
+cd github-trend-insights
 
-# Specify database file
-python run_pipeline.py --config cardano --database cardano_wallets.duckdb
+# Navigate to main project
+cd github_insights
 
-# Enable debug logging
-python run_pipeline.py --config test --log-level DEBUG --log-file logs/debug.log
-
-# Include archived repositories
-python run_pipeline.py --search "cardano" --include-archived
+# Install dependencies
+pip install -e .
+# or for development
+pip install -e .[test]
 ```
 
-### Command Line Help
+### Configuration
+
+1. **Set GitHub Token** (optional but recommended):
+```bash
+export GITHUB_TOKEN="ghp_your_token_here"
+```
+
+2. **Configure dlt** (edit `.dlt/secrets.toml`):
+```toml
+[sources.github]
+token = "ghp_your_token_here"
+```
+
+### Usage
 
 ```bash
-python run_pipeline.py --help
+# Run complete pipeline
+make run-pipeline
+
+# Or run components separately
+make run-github      # Collect GitHub data
+make run-dbt         # Run dbt transformations  
+make export          # Export to parquet files
+
+# Development workflows
+make run-github-sample  # Limited data for testing
+make test              # Run all tests
+make docs             # Generate dbt documentation
 ```
 
-## 📊 Data Schema
+## 📊 Data Models
 
-The pipeline collects three main data types:
+### Bronze Layer (Raw Data)
+- `stg_github_repositories` - Raw repository metadata
+- `stg_github_pull_requests` - Raw pull request data
+- `stg_github_releases` - Raw release data
 
-### Repositories
-- Basic metadata (name, description, stars, forks)
-- Owner information (user/organization details)
-- Languages and topics
-- Repository settings and permissions
-- Creation, update, and push timestamps
+### Silver Layer (Cleaned Data)  
+- `stg_pull_requests` - Cleaned PRs with feature classification
+- `stg_releases` - Deduplicated and cleaned releases
 
-### Pull Requests
-- PR metadata (title, body, state, author)
-- Code changes (additions, deletions, files changed)
-- Labels and milestones
-- Review information
-- Timeline data (created, merged, closed)
+### Gold Layer (Analytics)
+- `feature_prs_monthly` - Monthly PR trends by feature type
+- `feature_releases_monthly` - Release patterns over time
+- `median_feature_prs_lace_vs_top10` - Comparative ecosystem analysis
 
-### Releases  
-- Release metadata (name, tag, description)
-- Publication dates and authors
-- Pre-release and draft status
-- Release assets and download counts
+## 🎯 Tracked Repositories
 
-## 🏗️ Architecture
+- **cardano-foundation/cardano-wallet** - Official Cardano wallet
+- **input-output-hk/cardano-node** - Cardano node implementation
+- **input-output-hk/plutus** - Plutus smart contract platform
+- **Emurgo/cardano-serialization-lib** - Cardano serialization library
+- **input-output-hk/cardano-ledger** - Ledger specifications
+- **input-output-hk/ouroboros-network** - Networking layer
 
-### Pipeline Design
-
-```
-GitHub GraphQL API → dlt Pipeline → DuckDB → Analytics
-```
-
-**Key Components:**
-
-- **`pipeline.py`** - Core dlt pipeline with all resources and transformations
-- **`run_pipeline.py`** - Configurable runner with monitoring and error handling
-- **`GitHubCollector`** - API client with rate limiting and retry logic
-- **Incremental Loading** - Automatically skips existing data
-
-### Error Handling & Resilience
-
-- **Automatic Retries** - Exponential backoff for transient failures
-- **Rate Limit Management** - Intelligent waiting when limits are approached  
-- **Graceful Degradation** - Continues processing when individual repositories fail
-- **State Persistence** - Resumes from where it left off after interruptions
-
-## 📈 Usage Examples
-
-### Basic Data Collection
-
-```python
-from pipeline import github_source
-import dlt
-
-# Create pipeline
-pipeline = dlt.pipeline(
-    pipeline_name='cardano_analysis',
-    destination='duckdb',
-    dataset_name='cardano_data'
-)
-
-# Run collection
-info = pipeline.run(github_source(
-    search_term='cardano wallet',
-    max_repos=100,
-    min_stars=1
-))
-
-print(f"Collected: {info}")
-```
-
-### Analyzing Results
-
-```python
-import duckdb
-
-# Connect to database
-conn = duckdb.connect('cardano_analysis.duckdb', read_only=True)
-
-# Top repositories by activity
-top_repos = conn.execute("""
-    SELECT 
-        r.name_with_owner as repo,
-        r.stargazer_count as stars,
-        COUNT(pr.number) as total_prs,
-        COUNT(rel.name) as total_releases
-    FROM cardano_data.repositories r
-    LEFT JOIN cardano_data.pull_requests pr ON r.name_with_owner = pr.repo  
-    LEFT JOIN cardano_data.releases rel ON r.name_with_owner = rel.repo
-    GROUP BY r.name_with_owner, r.stargazer_count
-    ORDER BY total_prs DESC
-    LIMIT 10
-""").fetchall()
-
-print("Top repositories by development activity:")
-for repo, stars, prs, releases in top_repos:
-    print(f"  {repo}: {stars}⭐ {prs} PRs, {releases} releases")
-```
-
-## 🔧 Advanced Features
-
-### Custom Search Queries
-
-The pipeline supports GitHub's full search syntax:
+## 🧪 Testing
 
 ```bash
-# Recent activity
-python run_pipeline.py --search "cardano wallet pushed:>2024-01-01"
+# Run all tests
+make test
 
-# Specific languages
-python run_pipeline.py --search "cardano wallet language:typescript"
-
-# Organization-specific
-python run_pipeline.py --search "cardano wallet org:input-output-hk"
-
-# Size filters
-python run_pipeline.py --search "cardano wallet size:>1000"
+# Run specific test categories
+make test-connectors    # Connector tests only
+pytest tests/ -v        # Verbose output
+pytest tests/ -m integration  # Integration tests only
 ```
 
-### Monitoring & Logging
+## 🔄 Legacy Pipeline (Deprecated)
 
-```bash
-# Detailed logging to file
-python run_pipeline.py --config cardano --log-level DEBUG --log-file logs/pipeline.log
+The root-level `pipeline.py` and `run_pipeline.py` are legacy components that are being phased out in favor of the new dbt-based architecture in `github_insights/`. They remain for backward compatibility but new development should use the dbt project.
 
-# Monitor rate limits and performance
-tail -f logs/pipeline.log | grep -E "(rate limit|completed|error)"
-```
+## 📈 Data Exports
 
-### Database Management
+Processed data is automatically exported to parquet files:
 
-```python
-import duckdb
-
-# Check collection status
-conn = duckdb.connect('github_cardano.duckdb')
-
-# Repository counts
-repo_count = conn.execute("SELECT COUNT(*) FROM github_data.repositories").fetchone()[0]
-print(f"Total repositories: {repo_count}")
-
-# PR statistics  
-pr_stats = conn.execute("""
-    SELECT 
-        state,
-        COUNT(*) as count
-    FROM github_data.pull_requests 
-    GROUP BY state
-""").fetchall()
-
-print("Pull request states:")
-for state, count in pr_stats:
-    print(f"  {state}: {count}")
-```
-
-## 🛠️ Development
-
-### Installation for Development
-
-```bash
-# Install with dev dependencies
-uv sync --extra dev
-
-# Or with pip
-pip install -e ".[dev]"
-```
-
-### Code Quality
-
-```bash
-# Format code
-black pipeline.py run_pipeline.py
-
-# Sort imports  
-isort pipeline.py run_pipeline.py
-
-# Type checking
-mypy pipeline.py run_pipeline.py
-
-# Run tests
-pytest
-```
-
-### Project Structure
-
-```
-github-trend-insights/
-├── pipeline.py              # Core dlt pipeline
-├── run_pipeline.py          # Configurable runner
-├── pyproject.toml          # Dependencies and configuration
-├── .env.example            # Environment template
-├── README.md               # This file
-├── .gitignore              # Git ignore rules
-└── logs/                   # Log files (created during runs)
-```
-
-## 📊 Dataset Statistics
-
-Typical collection results for the Cardano wallet ecosystem:
-
-- **~500 repositories** (complete ecosystem)
-- **~25,000 pull requests** (with full metadata and bodies)
-- **~4,000 releases** (with descriptions and assets)
-- **~8,000 labeled PRs** (30%+ label coverage)
-- **Complete development history** for all major wallets
+- `exports/stg_pull_requests.parquet` - All processed pull requests
+- `exports/stg_releases.parquet` - All processed releases  
+- `exports/feature_prs_monthly.parquet` - Monthly PR analytics
+- `exports/feature_releases_monthly.parquet` - Monthly release analytics
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes and add tests
-4. Run the test suite: `pytest`
-5. Submit a pull request
+1. Use the modern `github_insights/` structure for new development
+2. Follow the established medallion architecture (Bronze→Silver→Gold)
+3. Add tests for any new connectors or models
+4. Update documentation for new features
+5. Ensure all tests pass before submitting changes
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🔗 Related Projects
-
-- **[dlt](https://github.com/dlt-hub/dlt)** - Data load tool for modern data stack
-- **[DuckDB](https://github.com/duckdb/duckdb)** - Fast analytical database
-- **[GitHub GraphQL API](https://docs.github.com/en/graphql)** - GitHub's API v4
-
----
-
-**Built with**: Python, dlt, DuckDB, GitHub GraphQL API  
-**Author**: [jitsejan](https://github.com/jitsejan)  
-**Dataset**: Complete Cardano wallet ecosystem
+This project analyzes public GitHub data for research and analytics purposes.
