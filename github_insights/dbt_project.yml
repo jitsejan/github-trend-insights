@@ -1,7 +1,7 @@
-name: 'github_insights'
+name: 'cardano_insights'
 version: '1.0.0'
 
-profile: 'github_insights'
+profile: 'cardano_insights'
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]
@@ -15,10 +15,16 @@ clean-targets:
   - "dbt_packages"
 
 models:
-  github_insights:
+  cardano_insights:
     bronze:
       +materialized: table
+      +docs:
+        node_color: "#8B4513"
     silver:
       +materialized: table
+      +docs:
+        node_color: "#C0C0C0"
     gold:
       +materialized: table
+      +docs:
+        node_color: "#FFD700"

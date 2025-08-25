@@ -1,3 +1,6 @@
+-- Bronze layer: Raw GitHub data from dlt pipeline
+-- This will be replaced by dlt-generated tables when the connector is deployed
+
 SELECT
   repository,
   prs,

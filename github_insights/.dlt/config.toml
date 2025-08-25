@@ -1,0 +1,23 @@
+[runtime]
+log_level = "INFO"
+dlthub_telemetry = false
+
+[sources.github]
+# GitHub API configuration
+api_url = "https://api.github.com"
+requests_per_minute = 5000  # GitHub rate limit for authenticated users
+page_size = 100
+
+[destination.duckdb]
+# DuckDB destination configuration 
+database = "github_cardano.duckdb"
+
+[destination.filesystem]
+# Filesystem destination for exports
+bucket_url = "exports/"
+
+[destination.s3]
+# S3 destination configuration (when needed)
+# aws_access_key_id will be read from environment
+# aws_secret_access_key will be read from environment
+bucket_url = "s3://tech-intelligence-data-new/github/"

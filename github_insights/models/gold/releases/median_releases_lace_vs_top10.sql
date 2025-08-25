@@ -37,7 +37,7 @@ intervals as (
 
 select
     repository,
-    quantile_cont(days_diff, 0.5) as median_days_between_releases
+    round(quantile_cont(days_diff, 0.5), 2) as median_days_between_releases
 from intervals
 group by repository
 order by median_days_between_releases

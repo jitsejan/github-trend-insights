@@ -1,35 +1,33 @@
-WITH exploded AS (
-  SELECT 
-    repository,
-    UNNEST(releases) AS release_struct
-  FROM {{ ref('stg_repository_base') }}
-),
+-- Silver layer: Cleaned and standardized releases  
+-- Enriches raw GitHub release data with standardized fields
 
-flattened AS (
-  SELECT
-    repository,
-    release_struct.author AS release_author,
-    release_struct.name AS release_name,
-    release_struct.tag_name AS tag,
-    release_struct.published_at AS published_at,
-    release_struct.created_at AS created_at,
-    release_struct.updated_at AS updated_at,
-    release_struct.url AS release_url,
-    release_struct.body AS body,
-    release_struct.draft AS is_draft,
-    release_struct.prerelease AS is_prerelease
-  FROM exploded
-),
+{{ config(
+    materialized='table',
+    docs={'node_color': '#C0C0C0'}
+) }}
 
-ranked AS (
-  SELECT *,
-    ROW_NUMBER() OVER (
-      PARTITION BY repository, tag, release_url
-      ORDER BY updated_at DESC
-    ) AS row_num
-  FROM flattened
+WITH releases_cleaned AS (
+    SELECT
+        repository_full_name as repository,
+        id,
+        name as release_name,
+        tag_name as tag,
+        author.login as release_author,
+        published_at,
+        created_at,
+        updated_at,
+        html_url as release_url,
+        body,
+        draft as is_draft,
+        prerelease as is_prerelease,
+        fetched_at,
+        ROW_NUMBER() OVER (
+            PARTITION BY repository_full_name, tag_name 
+            ORDER BY published_at DESC
+        ) as row_num
+    FROM {{ ref('stg_github_releases') }}
+    WHERE published_at IS NOT NULL
 )
 
-SELECT *
-FROM ranked
+SELECT * FROM releases_cleaned
 WHERE row_num = 1

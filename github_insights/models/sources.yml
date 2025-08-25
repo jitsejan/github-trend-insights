@@ -1,0 +1,56 @@
+version: 2
+
+sources:
+  - name: github_raw
+    description: Raw GitHub data from dlt pipeline
+    tables:
+      - name: pull_requests
+        description: Raw pull requests from GitHub API
+        columns:
+          - name: id
+            description: GitHub pull request ID
+            tests:
+              - not_null
+              - unique
+          - name: number
+            description: Pull request number
+          - name: title
+            description: Pull request title
+          - name: body
+            description: Pull request description/body
+          - name: state
+            description: Pull request state (open/closed)
+          - name: repository_full_name
+            description: Repository name in owner/repo format
+            tests:
+              - not_null
+              
+      - name: releases
+        description: Raw releases from GitHub API
+        columns:
+          - name: id
+            description: GitHub release ID
+            tests:
+              - not_null
+              - unique
+          - name: tag_name
+            description: Release tag name
+          - name: name
+            description: Release name
+          - name: repository_full_name
+            description: Repository name in owner/repo format
+            tests:
+              - not_null
+              
+      - name: repositories
+        description: Raw repository metadata from GitHub API
+        columns:
+          - name: id
+            description: GitHub repository ID
+            tests:
+              - not_null
+              - unique
+          - name: full_name
+            description: Repository name in owner/repo format
+            tests:
+              - not_null
